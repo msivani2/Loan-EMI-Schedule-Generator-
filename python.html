@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NBFC Loan EMI Schedule Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 p-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+        <h1 class="text-2xl font-bold text-slate-900 mb-2">Loan EMI Schedule Generator</h1>
+        <p class="text-slate-500 mb-6">Upload loan master CSVs to calculate reducing-balance amortisations, manage mid-tenure resets, and export borrower schedules.</p>
+
+        <!-- CSV Ingestion -->
+        <div class="bg-slate-100 p-4 rounded-lg mb-6 border border-dashed border-slate-300 flex items-center justify-between">
+            <div>
+                <label class="block font-semibold text-slate-700">Upload Loan Master CSV</label>
+                <input type="file" id="csvFile" accept=".csv" class="mt-1 text-sm text-slate-600">
+            </div>
+            <button onclick="uploadCSV()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md">Process CSV</button>
+        </div>
+
+        <!-- Loan Selection & Controls -->
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-3">
+                <label class="font-semibold text-slate-700">Select Borrower Loan:</label>
+                <select id="loanSelect" onchange="fetchSchedule()" class="border border-slate-300 rounded-md p-2">
+                    <option value="">-- Choose Loan --</option>
+                </select>
+            </div>
+            <button id="pdfBtn" onclick="downloadPDF()" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-md">Export Borrower PDF</button>
+        </div>
+
+        <!-- Schedule Table -->
+        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-900 text-white">
+                    <tr>
+                        <th class="p-3 text-left">Month</th>
+                        <th class="p-3 text-right">Opening Balance (₹)</th>
+                        <th class="p-3 text-right">EMI (₹)</th>
+                        <th class="p-3 text-right">Interest (₹)</th>
+                        <th class="p-3 text-right">Principal (₹)</th>
+                        <th class="p-3 text-right">Closing Balance (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleBody" class="divide-y divide-slate-100 bg-white">
+                    <tr><td colspan="6" class="p-4 text-center text-slate-400">Upload a CSV or select a loan to view the schedule.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csvFile');
+            if(!fileInput.files[0]) return alert("Please select a file first!");
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const res = await fetch('/upload-csv', { method: 'POST', body: formData });
+            const data = await res.json();
+            if(res.ok) {
+                alert(`Successfully processed ${data.processed_loans} loans!`);
+                loadLoans();
+            } else {
+                alert(`Error: ${data.detail}`);
+            }
+        }
+
+        async function loadLoans() {
+            const res = await fetch('/loans');
+            const loans = await res.json();
+            const select = document.getElementById('loanSelect');
+            select.innerHTML = '<option value="">-- Choose Loan --</option>';
+            loans.forEach(l => {
+                select.innerHTML += `<option value="${l.id}">${l.id} - ${l.borrower_name}</option>`;
+            });
+        }
+
+        async function fetchSchedule() {
+            const loanId = document.getElementById('loanSelect').value;
+            const pdfBtn = document.getElementById('pdfBtn');
+            const tbody = document.getElementById('scheduleBody');
+            
+            if(!loanId) {
+                pdfBtn.disabled = true;
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a loan to view the schedule.</td></tr>';
+                return;
+            }
+
+            pdfBtn.disabled = false;
+            const res = await fetch(`/loan/${loanId}/schedule`);
+            const data = await res.json();
+
+            tbody.innerHTML = data.map(r => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 font-medium text-slate-900">${r.month}</td>
+                    <td class="p-3 text-right">${r.opening_balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3 text-right font-semibold text-blue-600">${r.emi.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3 text-right text-amber-600">${r.interest_payment.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3 text-right text-emerald-600">${r.principal_payment.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td class="p-3 text-right font-medium">${r.closing_balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                </tr>
+            `).join('');
+        }
+
+        function downloadPDF() {
+            const loanId = document.getElementById('loanSelect').value;
+            if(loanId) window.open(`/loan/${loanId}/pdf`, '_blank');
+        }
+
+        // Initial Load
+        loadLoans();
+    </script>
+</body>
+</html>
