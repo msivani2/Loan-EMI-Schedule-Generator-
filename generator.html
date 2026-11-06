@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Schedule generator | Paisa Ledger</title><link rel="stylesheet" href="style.css"></head>
+<body data-protected="1"><nav class="nav" id="nav"></nav>
+<div class="wrap">
+<section class="noprint"><h1>Schedule generator</h1>
+<div class="panel"><h3>1. Add your loan master</h3>
+<p>Columns: <code>loan_id, borrower, principal, annual_rate, tenure_months, start_date, resets</code>. Write resets as <code>month:rate</code> joined by <code>|</code>, for example <code>12:10.0|24:10.75</code>.</p>
+<div class="row"><div><label for="file">Upload CSV</label><input id="file" type="file" accept=".csv,text/csv"></div><button class="btn alt" id="sample" type="button">Load sample</button></div>
+<label for="csvText">Or paste CSV</label><textarea id="csvText" rows="6"></textarea>
+<p class="msg" id="gmsg" role="alert"></p><button class="btn" id="run" type="button">Generate schedules</button></div>
+<div class="panel loans" id="loansPanel" hidden style="margin-top:1rem"><h3>2. Choose a loan</h3>
+<div class="scroll"><table class="t"><thead><tr><th>Loan ID</th><th>Borrower</th><th>Principal (₹)</th><th>Rate</th><th>Months</th></tr></thead><tbody id="loanBody"></tbody></table></div></div></section>
+<section id="printArea"><div id="result" hidden>
+<div id="printHead"></div>
+<h2 id="title"></h2>
+<div class="row noprint" style="margin-bottom:1rem"><div><label for="rm">Add a rate reset: month</label><input id="rm" type="number" min="2" placeholder="e.g. 12"></div><div><label for="rr">New annual rate (%)</label><input id="rr" type="number" step="0.01" min="0" placeholder="e.g. 11.25"></div><button class="btn alt" id="addReset" type="button">Apply reset</button><button class="btn" id="pdf" type="button">Export PDF</button></div>
+<div class="stats" id="stats"></div>
+<div class="scroll"><table class="t"><thead><tr><th>#</th><th>Due date</th><th>Rate</th><th>Opening (₹)</th><th>EMI (₹)</th><th>Interest (₹)</th><th>Principal (₹)</th><th>Closing (₹)</th></tr></thead><tbody id="schedBody"></tbody></table></div>
+<p class="noprint" style="color:var(--muted)">Highlighted amber rows are rate resets. The green row is the final instalment, which absorbs any rounding residue.</p>
+</div></section>
+</div>
+<script src="app.js"></script></body></html>
